@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cricket Scorer</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2d6a3e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cricket Scorer">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#f3f1e8;--ink:#17301f;--mut:#5b6b5f;--card:#fff;--line:#d5d8c8;--g:#2d6a3e;--b:#1f5fa8;--r:#b3382c;--on:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1a13;--ink:#e8efe6;--mut:#9fb0a3;--card:#16241a;--line:#2a3d2f;--g:#6fc48a;--b:#7fb3ea;--r:#f08a7e;--on:#0f1a13}}
+:root[data-theme="dark"]{--bg:#0f1a13;--ink:#e8efe6;--mut:#9fb0a3;--card:#16241a;--line:#2a3d2f;--g:#6fc48a;--b:#7fb3ea;--r:#f08a7e;--on:#0f1a13}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:12px;max-width:620px;margin-inline:auto}
+h1{font-size:22px;font-weight:800;margin:4px 0 10px}h2{font-size:17px;margin:0 0 8px}h3{font-size:15px;margin:12px 0 4px}
+.tabs{display:flex;gap:4px;margin-bottom:12px}.tabs button{flex:1;padding:9px 2px;font-size:14px}
+button{font:inherit;font-size:15px;padding:10px 8px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button.act{background:var(--g);color:var(--on);border-color:var(--g)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--b);outline-offset:2px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;overflow-x:auto}
+input[type=text],input[type=number],select{font:inherit;width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);margin:4px 0 10px}
+.score{font-size:46px;font-weight:800;line-height:1}.mut{color:var(--mut);font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}.grid button{padding:14px 0;font-size:19px;font-weight:800}
+.grid.s button{font-size:14px;font-weight:500;padding:10px 0}
+.w{background:var(--r);color:var(--on);border-color:var(--r)}
+.balls{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.balls span{min-width:30px;text-align:center;padding:4px 6px;border-radius:999px;background:var(--bg);border:1px solid var(--line);font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:6px 3px;text-align:center;border-bottom:1px solid var(--line)}th:first-child,td:first-child{text-align:left}
+td small{display:block;color:var(--mut);font-size:12px}
+.ovr{padding:8px 0;border-bottom:1px solid var(--line)}.ovr .balls{margin-top:6px}
+.res{font-weight:800;color:var(--g);margin-top:8px}.row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.pl{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line)}
+.fh{background:var(--r);color:var(--on);border-radius:8px;padding:4px 10px;font-weight:800;display:inline-block;margin-top:8px}
+svg text{fill:var(--mut);font-size:10px}.ax{stroke:var(--line)}
+</style></head><body>
+<h1>Cricket Scorer International</h1>
+<div class="tabs"><button data-t="score">Score</button><button data-t="card">Card</button><button data-t="graph">Graph</button><button data-t="matches">Matches</button><button data-t="table">Table</button></div>
+<div id="app"></div>
+<script>
+var K="cricket-scorer-intl-v3",M=[],cur=null,mod="",xt="",tab="score",gm="over",wo=false,W={k:"",who:"s",f:"",x:0},app=document.getElementById("app");
+var CR={bowled:1,caught:1,lbw:1,stumped:1,hitwicket:1},KN={bowled:"Bowled",caught:"Caught",lbw:"LBW",runout:"Run out",stumped:"Stumped",hitwicket:"Hit wicket",obstruct:"Obstructing the field",handled:"Handled the ball",hitball:"Hit the ball twice"};
+try{M=JSON.parse(localStorage.getItem(K))||[]}catch(e){M=[]}
+function save(){try{localStorage.setItem(K,JSON.stringify(M))}catch(e){}}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function st(n){var r=0,b=0,w=0;n.ev.forEach(function(e){r+=e.r;b+=e.l;if(e.d)w++});return{r:r,b:b,w:w}}
+function ov(b){return Math.floor(b/6)+"."+b%6}
+function lim(m){return Math.min(10,m.pp-1)}
+function done(m,i){var n=m.inns[i],s=st(n);return !!n.closed||s.b>=m.ov*6||s.w>=lim(m)||(i==1&&s.r>st(m.inns[0]).r)}
+function active(m){return !done(m,0)?0:!done(m,1)?1:-1}
+function need(m,i){var n=m.inns[i];return n.s==null?"s":n.ns==null?"ns":n.bw==null?"bw":""}
+function cm(){return M.filter(function(m){return m.id==cur})[0]}
+function swap(n){var q=n.s;n.s=n.ns;n.ns=q}
+function fresh(){return{ev:[],bat:[],bowl:[],s:null,ns:null,bw:null}}
+function freeHit(n){for(var j=n.ev.length-1;j>=0;j--){var t=n.ev[j].t;if(t=="wd"||t=="pen"||t=="ret")continue;return t=="nb"}return false}
+function dtext(d,bw){var k=d.k,f=d.f;return k=="bowled"?"b "+bw:k=="caught"?(f&&f.toLowerCase()==bw.toLowerCase()?"c & b "+bw:"c "+(f||"?")+" b "+bw):k=="lbw"?"lbw b "+bw:k=="stumped"?"st "+(f||"?")+" b "+bw:k=="runout"?"run out"+(f?" ("+f+")":""):k=="hitwicket"?"hit wicket b "+bw:k=="obstruct"?"obstructing the field":k=="handled"?"handled the ball":k=="hitball"?"hit the ball twice":"retired out"}
+function lab(e){if(e.t=="pen")return"P"+e.pn;if(e.t=="ret")return"Ret";var x=e.br+e.xb+e.xl,s=e.t=="wd"?"Wd"+(e.wr>1?e.wr-1:""):e.t=="nb"?"Nb"+(x||""):e.xb?"B"+e.xb:e.xl?"LB"+e.xl:""+e.br;return e.d?"W"+(e.t?"("+s+")":""):s}
+function stats(m,i){var n=m.inns[i],B={},Wk={},X={wd:0,nb:0,b:0,lb:0,pn:0},F=[],P={},run=0,wk=0,lb=0,E=function(x){return B[x]=B[x]||{r:0,b:0,f:0,s:0,o:""}};
+n.ev.forEach(function(e){
+if(e.t!="pen"&&e.t!="ret"){var q=E(e.b);if(e.t!="wd"){q.r+=e.br;q.b++;if(e.br==4)q.f++;if(e.br==6)q.s++}
+var c=e.br+e.wr+e.nbp,v=Wk[e.bw]=Wk[e.bw]||{b:0,r:0,w:0,m:0,wd:0,nb:0};v.b+=e.l;v.r+=c;if(e.t=="wd")v.wd++;if(e.t=="nb")v.nb++;if(e.d&&CR[e.d.k])v.w++;
+var k=e.bw+"_"+Math.floor(lb/6),pp=P[k]=P[k]||{bw:e.bw,l:0,r:0};pp.l+=e.l;pp.r+=c}
+X.wd+=e.wr;X.nb+=e.nbp;X.b+=e.xb;X.lb+=e.xl;X.pn+=e.pn;lb+=e.l;run+=e.r;
+if(e.d){wk++;E(e.d.who).o=e.t=="ret"?"retired out":dtext(e.d,n.bowl[e.bw]||"");F.push(wk+"-"+run+" ("+n.bat[e.d.who]+", "+ov(lb)+" ov)")}
+if(e.t=="ret"&&!e.d)E(e.who).o="retired hurt"});
+Object.keys(P).forEach(function(k){if(P[k].l==6&&P[k].r==0)Wk[P[k].bw].m++});return{B:B,W:Wk,X:X,F:F}}
+function overList(m,i){var n=m.inns[i],G=[],lb=0;n.ev.forEach(function(e){var o=Math.floor(lb/6),g=G[G.length-1];if(!g||g.o!=o){g={o:o,bw:e.bw,ev:[],r:0,w:0};G.push(g)}g.ev.push(e);g.r+=e.r;if(e.d)g.w++;lb+=e.l});return G}
+function spans(g){return g.ev.map(function(e){return"<span>"+lab(e)+"</span>"}).join("")}
+function overHtml(m,i){var n=m.inns[i],G=overList(m,i);if(!G.length)return"";return"<h3>Over by over</h3>"+G.map(function(g){return'<div class="ovr"><div class="row" style="margin:0"><span><b>Over '+(g.o+1)+"</b> · "+esc(n.bowl[g.bw]||"")+"</span><b>"+g.r+" runs"+(g.w?", "+g.w+" wkt":"")+'</b></div><div class="balls">'+spans(g)+"</div></div>"}).join("")}
+function sr(r,b){return b?(r/b*100).toFixed(0):"-"}
+function res(m){if(active(m)!=-1)return"";var x=st(m.inns[0]),y=st(m.inns[1]);
+if(y.r>x.r)return m.b+" won by "+(lim(m)-y.w)+" wickets";if(x.r>y.r)return m.a+" won by "+(x.r-y.r)+" runs";return"Match tied"}
+function preset(v){var p={t20:[20,4],odi:[50,10]}[v];if(p){document.getElementById("to").value=p[0];document.getElementById("tm").value=p[1]}}
+function newMatch(){var g=function(i){return document.getElementById(i).value.trim()},o=Math.max(1,Math.min(50,+g("to")||20)),pp=Math.max(2,Math.min(11,+g("tp")||11)),mx=Math.max(1,+g("tm")||Math.ceil(o/5));
+var m={id:Date.now(),a:g("ta")||"Team A",b:g("tb")||"Team B",ov:o,pp:pp,mx:mx,title:g("ti"),toss:g("ts"),inns:[fresh(),fresh()]};M.unshift(m);cur=m.id;tab="score";save();render()}
+function ball(x,d){var m=cm(),i=active(m);if(i<0)return;var n=m.inns[i];if(need(m,i))return;
+var t=mod,e={t:t,br:0,xb:0,xl:0,wr:0,nbp:0,pn:0,l:1,b:n.s,bw:n.bw,p:[n.s,n.ns,n.bw,n.bat.length,n.bowl.length]};
+if(t=="wd"){e.wr=1+x;e.l=0}else{if(t=="nb"){e.nbp=1;e.l=0}if(xt=="b")e.xb=x;else if(xt=="lb")e.xl=x;else e.br=x}
+e.r=e.br+e.xb+e.xl+e.wr+e.nbp;if(d)e.d=d;n.ev.push(e);
+if(d){if(d.k=="runout"&&x%2)swap(n);if(n.s==d.who)n.s=null;else n.ns=null}else if(x%2)swap(n);
+var s=st(n);if(e.l&&s.b%6==0){swap(n);n.bw=null}mod="";xt="";wo=false;save();render()}
+function allowed(n){return freeHit(n)||mod=="nb"?["runout","obstruct","handled","hitball"]:mod=="wd"?["stumped","runout","hitwicket","obstruct"]:Object.keys(KN)}
+function wopen(){var m=cm(),i=active(m);if(i<0||need(m,i))return;wo=true;W={k:allowed(m.inns[i])[0],who:"s",f:"",x:0};render()}
+function recordW(){var m=cm(),i=active(m),n=m.inns[i],k=W.k;if((k=="caught"||k=="stumped")&&!W.f.trim()){alert("Enter the fielder name.");return}
+var ns=k=="runout"||k=="obstruct"||k=="handled";if(k!="runout")xt="";ball(k=="runout"?+W.x:0,{k:k,who:ns&&W.who=="ns"?n.ns:n.s,f:W.f.trim()})}
+function extra(t,fn){var m=cm(),i=active(m);if(i<0||need(m,i))return;var n=m.inns[i],e={t:t,br:0,xb:0,xl:0,wr:0,nbp:0,pn:0,l:0,b:n.s,bw:n.bw,p:[n.s,n.ns,n.bw,n.bat.length,n.bowl.length]};fn(e,n);e.r=e.pn;n.ev.push(e);save();render()}
+function pen(){var m=cm();if(confirm("Add 5 penalty runs to the batting side?"))extra("pen",function(e){e.pn=5})}
+function retire(){var m=cm(),i=active(m);if(i<0||need(m,i))return;var n=m.inns[i],sk=confirm("Retire the striker ("+n.bat[n.s]+")?\nOK = striker. Cancel = non-striker ("+n.bat[n.ns]+").");
+var out=confirm("Retired OUT (counts as a wicket)?\nOK = retired out. Cancel = retired hurt.");extra("ret",function(e,n){e.who=sk?n.s:n.ns;if(out)e.d={k:"retout",who:e.who};if(sk)n.s=null;else n.ns=null})}
+function undo(){var m=cm(),i=active(m);if(i<0)i=1;var n=m.inns[i];if(!n.ev.length&&i==1){m.inns[1]=fresh();n=m.inns[0]}
+if(n.ev.length){var e=n.ev.pop();n.s=e.p[0];n.ns=e.p[1];n.bw=e.p[2];n.bat.length=e.p[3];n.bowl.length=e.p[4];delete n.closed}else{n.s=n.ns=n.bw=null;n.bat=[];n.bowl=[]}
+mod="";xt="";wo=false;save();render()}
+function endInn(){var m=cm(),i=active(m);if(i>=0&&confirm("End this innings now?")){m.inns[i].closed=1;save();render()}}
+function submitName(){var m=cm(),i=active(m),n=m.inns[i],k=need(m,i),el=document.getElementById("nn"),v=el.value.trim();if(!v){el.focus();return}
+if(k=="bw"){var q=n.bowl.map(function(x){return x.toLowerCase()}).indexOf(v.toLowerCase()),last=n.ev.length?n.bowl[n.ev[n.ev.length-1].bw]:null;
+if(last&&last.toLowerCase()==v.toLowerCase()){alert(last+" bowled the last over. Pick a different bowler.");return}
+if(q>=0){var used=stats(m,i).W[q];if(used&&used.b>=m.mx*6){alert(n.bowl[q]+" has bowled the maximum "+m.mx+" overs.");return}}else q=n.bowl.push(v)-1;n.bw=q}
+else{var x=n.bat.push(v)-1;if(k=="s")n.s=x;else n.ns=x}save();render()}
+function setMod(x){mod=mod==x?"":x;if(mod=="wd")xt="";wo=false;render()}
+function setXt(x){if(mod=="wd")return;xt=xt==x?"":x;render()}
+function openM(id){cur=id;tab="score";render()}
+function del(id){if(confirm("Delete this match?")){M=M.filter(function(m){return m.id!=id});if(cur==id)cur=null;save();render()}}
+function text(m){var t=(m.title?m.title+"\n":"")+m.a+" v "+m.b+"\n";[0,1].forEach(function(i){var n=m.inns[i],s=st(n),S=stats(m,i);t+="\n"+(i?m.b:m.a)+" "+s.r+"/"+s.w+" ("+ov(s.b)+" ov)\n";
+n.bat.forEach(function(p,x){var q=S.B[x]||{r:0,b:0};t+=p+" "+(q.o||"not out")+" "+q.r+"("+q.b+")\n"});t+="Extras "+(S.X.wd+S.X.nb+S.X.b+S.X.lb+S.X.pn)+"\n";
+n.bowl.forEach(function(p,x){var v=S.W[x]||{b:0,m:0,r:0,w:0};t+=p+" "+ov(v.b)+"-"+v.m+"-"+v.r+"-"+v.w+"\n"});overList(m,i).forEach(function(g){t+="Ov "+(g.o+1)+" "+(n.bowl[g.bw]||"")+": "+g.ev.map(lab).join(" ")+" ("+g.r+")\n"})});return t+"\n"+res(m)}
+function copyText(){var t=text(cm());if(navigator.clipboard)navigator.clipboard.writeText(t).then(function(){alert("Scorecard copied.")},function(){alert(t)});else alert(t)}
+function backup(){var t=JSON.stringify(M);if(navigator.clipboard)navigator.clipboard.writeText(t).then(function(){alert("Backup copied. Paste it somewhere safe.")},function(){prompt("Copy this backup:",t)});else prompt("Copy this backup:",t)}
+function restore(){var t=prompt("Paste your backup here:");if(!t)return;try{var a=JSON.parse(t);if(!Array.isArray(a))throw 0;M=a;save();render()}catch(e){alert("That backup could not be read.")}}
+function scoreView(){var m=cm();
+if(!m)return'<div class="card"><h2>New match</h2><label>Format<select onchange="preset(this.value)"><option value="t20">T20</option><option value="odi">ODI</option><option value="c">Custom</option></select></label><label>Match title or venue<input type="text" id="ti"></label><label>Team A (bats first)<input type="text" id="ta"></label><label>Team B<input type="text" id="tb"></label><label>Toss<input type="text" id="ts" placeholder="Team A won the toss and chose to bat"></label><label>Overs per innings<input type="number" id="to" value="20" min="1" max="50"></label><label>Max overs per bowler<input type="number" id="tm" value="4" min="1" max="50"></label><label>Players per team<input type="number" id="tp" value="11" min="2" max="11"></label><button class="act" onclick="newMatch()">Start match</button></div>';
+var i=active(m),k=i<0?1:i,n=m.inns[k],s=st(n),S=stats(m,k),bt=k?m.b:m.a,nd=i<0?"":need(m,i),r0=st(m.inns[0]),h='<div class="card"><div class="mut">'+esc(m.title||m.a+" v "+m.b)+" · "+m.ov+" overs"+(m.toss?" · "+esc(m.toss):"")+'</div><h2>'+esc(bt)+' batting</h2><div class="score">'+s.r+"/"+s.w+'</div><div class="mut">'+ov(s.b)+" / "+m.ov+" ov";
+if(s.b)h+=" · CRR "+(s.r/s.b*6).toFixed(2);if(k==1&&i==1){var nr=r0.r+1-s.r,bl=m.ov*6-s.b;h+=" · Target "+(r0.r+1)+" · need "+nr+" from "+bl+" balls"+(bl?" · RRR "+(nr/bl*6).toFixed(2):"")}h+="</div>";
+if(i>=0){[n.s,n.ns].forEach(function(x,j){if(x==null)return;var q=S.B[x]||{r:0,b:0};h+='<div class="pl"><span>'+(j?"":"* ")+esc(n.bat[x])+'</span><b>'+q.r+" ("+q.b+")</b></div>"});
+if(n.bw!=null){var v=S.W[n.bw]||{b:0,r:0,w:0,m:0};h+='<div class="pl"><span>Bowling: '+esc(n.bowl[n.bw])+"</span><b>"+ov(v.b)+"-"+v.m+"-"+v.r+"-"+v.w+"</b></div>"}
+if(!nd&&freeHit(n))h+='<div class="fh">FREE HIT</div>'}
+var G=overList(m,k),g=G[G.length-1];h+=(g?'<div class="mut" style="margin-top:8px">Over '+(g.o+1)+" · "+esc(n.bowl[g.bw]||"")+'</div><div class="balls">'+spans(g)+"</div>":"");if(i<0)h+='<div class="res">'+res(m)+"</div>";h+="</div>";
+if(nd){var first=!n.ev.length,lb=nd=="s"?(n.bat.length<2&&first?"Opening batter, on strike":"New batter coming in"):nd=="ns"?(n.bat.length<2&&first?"Opening batter, non-striker":"New batter at the non-striker end"):(first?"Opening bowler":"Bowler for the next over");
+h+='<div class="card"><h2>'+lb+'</h2><input type="text" id="nn" list="dl" autocomplete="off" placeholder="Type the name" onkeydown="if(event.key==\'Enter\')submitName()"><datalist id="dl">'+(nd=="bw"?n.bowl.map(function(b){return'<option value="'+esc(b)+'">'}).join(""):"")+'</datalist><div class="row"><button class="act" style="flex:1" onclick="submitName()">Add</button><button style="flex:1" onclick="undo()">Undo</button></div></div>'}
+else if(i>=0){var A=function(c,l,f){return'<button class="'+(c?"act":"")+'" onclick="'+f+'">'+l+"</button>"};
+h+='<div class="grid s">'+A(mod=="wd","Wide","setMod(\'wd\')")+A(mod=="nb","No ball","setMod(\'nb\')")+A(xt=="b","Bye","setXt(\'b\')")+A(xt=="lb","Leg bye","setXt(\'lb\')")+"</div>";
+if(wo){var al=allowed(n),ro=W.k=="runout",wr=ro||W.k=="obstruct"||W.k=="handled",fl=W.k=="caught"||W.k=="stumped"||ro;
+h+='<div class="card" style="margin-top:8px"><h2>Wicket</h2><select onchange="W.k=this.value;render()">'+al.map(function(k){return'<option value="'+k+'"'+(k==W.k?" selected":"")+">"+KN[k]+"</option>"}).join("")+"</select>"
++(wr?'<select onchange="W.who=this.value"><option value="s"'+(W.who=="s"?" selected":"")+">Out: "+esc(n.bat[n.s])+' (striker)</option><option value="ns"'+(W.who=="ns"?" selected":"")+">Out: "+esc(n.bat[n.ns])+" (non-striker)</option></select>":"")
++(fl?'<input type="text" list="fl" autocomplete="off" placeholder="Fielder'+(ro?" (optional)":"")+'" value="'+esc(W.f)+'" oninput="W.f=this.value"><datalist id="fl">'+n.bowl.map(function(b){return'<option value="'+esc(b)+'">'}).join("")+"</datalist>":"")
++(ro?'<label class="mut">Runs completed<select onchange="W.x=this.value">'+[0,1,2,3].map(function(x){return'<option value="'+x+'"'+(W.x==x?" selected":"")+">"+x+"</option>"}).join("")+"</select></label>":"")
++'<div class="row"><button class="w" style="flex:1" onclick="recordW()">Record wicket</button><button style="flex:1" onclick="wo=false;render()">Cancel</button></div></div>'}
+h+='<div class="grid">'+[0,1,2,3,4,5,6].map(function(x){return'<button onclick="ball('+x+',0)">'+x+"</button>"}).join("")+'<button class="w" onclick="wopen()">W</button></div><div class="grid s"><button onclick="undo()">Undo</button><button onclick="pen()">Penalty 5</button><button onclick="retire()">Retire</button><button onclick="endInn()">End inn.</button></div>'
++'<p class="mut">'+(mod||xt?"Next ball: "+[mod=="wd"?"wide":mod=="nb"?"no ball":"",xt=="b"?"byes":xt=="lb"?"leg byes":""].filter(Boolean).join(" + ")+". Tap the runs.":"Tap the runs for a normal ball. For extras, choose them first.")+"</p>"}
+if(i<0)h+='<div class="grid s" style="grid-template-columns:repeat(3,1fr)"><button onclick="undo()">Undo</button><button onclick="copyText()">Copy scorecard</button><button onclick="cur=null;render()">Close</button></div>';
+else if(!nd)h+='<div class="grid s" style="grid-template-columns:1fr"><button onclick="cur=null;render()">Close match (saved)</button></div>';
+return h}
+function cardView(){var m=cm();if(!m)return'<div class="card mut">Open a match first.</div>';var h="";
+[0,1].forEach(function(i){var n=m.inns[i],s=st(n),S=stats(m,i),X=S.X,ex=X.wd+X.nb+X.b+X.lb+X.pn;h+='<div class="card"><h2>'+esc(i?m.b:m.a)+" "+s.r+"/"+s.w+" ("+ov(s.b)+" ov)</h2><table><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr>";
+n.bat.forEach(function(name,x){var q=S.B[x]||{r:0,b:0,f:0,s:0,o:""};h+="<tr><td>"+esc(name)+"<small>"+esc(q.o||"not out")+"</small></td><td><b>"+q.r+"</b></td><td>"+q.b+"</td><td>"+q.f+"</td><td>"+q.s+"</td><td>"+sr(q.r,q.b)+"</td></tr>"});
+h+='</table><p class="mut">Extras '+ex+" (b "+X.b+", lb "+X.xl+", w "+X.wd+", nb "+X.nb+", p "+X.pn+")"+(S.F.length?"<br>Fall of wickets: "+esc(S.F.join(", ")):"")+'</p><h3>Bowling: '+esc(i?m.a:m.b)+"</h3><table><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Econ</th><th>Wd</th><th>Nb</th></tr>";
+n.bowl.forEach(function(name,x){var v=S.W[x]||{b:0,r:0,w:0,m:0,wd:0,nb:0};h+="<tr><td>"+esc(name)+"</td><td>"+ov(v.b)+"</td><td>"+v.m+"</td><td>"+v.r+"</td><td><b>"+v.w+"</b></td><td>"+(v.b?(v.r/v.b*6).toFixed(1):"-")+"</td><td>"+v.wd+"</td><td>"+v.nb+"</td></tr>"});h+="</table>"+overHtml(m,i)+"</div>"});
+return h+(res(m)?'<div class="res">'+res(m)+"</div>":"")}
+function series(m,i){var o=[],w=[],lb=0;m.inns[i].ev.forEach(function(e){var k=Math.floor(lb/6);o[k]=(o[k]||0)+e.r;if(e.d)w[k]=1;lb+=e.l});for(var k=0;k<o.length;k++)o[k]=o[k]||0;if(gm=="cum"){var c=0;o=o.map(function(v){return c+=v})}return{o:o,w:w}}
+function graphView(){var m=cm();if(!m)return'<div class="card mut">Open a match first.</div>';var A=series(m,0),B=series(m,1),N=Math.max(m.ov,A.o.length,B.o.length),mx=Math.max.apply(null,A.o.concat(B.o,[6])),u=mx>40?10:2;mx=Math.ceil(mx/u)*u;
+var Wd=340,H=220,L=30,R=10,T=14,Bt=26,X=function(k){return L+(N>1?k*(Wd-L-R)/(N-1):0)},Y=function(v){return H-Bt-v/mx*(H-Bt-T)},g="";
+for(var j=0;j<=4;j++){var v=mx*j/4;g+='<line class="ax" x1="'+L+'" x2="'+(Wd-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'"/><text x="'+(L-4)+'" y="'+(Y(v)+3)+'" text-anchor="end">'+Math.round(v)+"</text>"}
+for(var k=0;k<N;k++)if(N<=12||k%2==0||k==N-1)g+='<text x="'+X(k)+'" y="'+(H-10)+'" text-anchor="middle">'+(k+1)+"</text>";
+[[A,"var(--b)"],[B,"var(--r)"]].forEach(function(p){if(!p[0].o.length)return;g+='<polyline fill="none" stroke="'+p[1]+'" stroke-width="2.5" points="'+p[0].o.map(function(v,k){return X(k)+","+Y(v)}).join(" ")+'"/>'+p[0].o.map(function(v,k){return'<circle cx="'+X(k)+'" cy="'+Y(v)+'" r="3.5" fill="'+p[1]+'"/>'+(p[0].w[k]?'<circle cx="'+X(k)+'" cy="'+Y(v)+'" r="8" fill="none" stroke="'+p[1]+'" stroke-width="1.5"/>':"")}).join("")});
+return'<div class="card"><h2>'+(gm=="over"?"Runs per over":"Cumulative runs")+'</h2><div class="tabs"><button class="'+(gm=="over"?"act":"")+'" onclick="gm=\'over\';render()">Per over</button><button class="'+(gm=="cum"?"act":"")+'" onclick="gm=\'cum\';render()">Cumulative</button></div><svg viewBox="0 0 '+Wd+" "+H+'" width="100%" role="img" aria-label="Runs by over for both innings">'+g+'</svg><div class="mut"><span style="color:var(--b)">&#9679;</span> '+esc(m.a)+' &nbsp; <span style="color:var(--r)">&#9679;</span> '+esc(m.b)+' &nbsp; Ring = wicket in that over</div></div>'}
+function matchesView(){var h=M.length?"":'<div class="card mut">No matches yet.</div>';
+h+=M.map(function(m){var a=st(m.inns[0]),b=st(m.inns[1]);return'<div class="card"><div class="row"><b>'+esc(m.a)+" v "+esc(m.b)+'</b><span class="mut">'+m.ov+' ov</span></div><div class="mut">'+a.r+"/"+a.w+" · "+b.r+"/"+b.w+'</div><div class="res">'+(res(m)||"In progress")+'</div><div class="row" style="margin-top:8px"><button style="flex:1" onclick="openM('+m.id+')">Open</button><button style="flex:1" onclick="del('+m.id+')">Delete</button></div></div>'}).join("");
+return h+'<div class="grid s" style="grid-template-columns:1fr 1fr"><button onclick="backup()">Copy backup</button><button onclick="restore()">Restore backup</button></div><p class="mut">Matches live in this browser. Copy a backup regularly.</p>'}
+function tableView(){var T={};M.forEach(function(m){if(active(m)!=-1)return;var x=st(m.inns[0]),y=st(m.inns[1]),f=function(s){return s.w>=lim(m)?m.ov:s.b/6};[m.a,m.b].forEach(function(t){T[t]=T[t]||{p:0,w:0,l:0,t:0,pts:0,rf:0,of:0,ra:0,oa:0}});var A=T[m.a],B=T[m.b];A.p++;B.p++;
+A.rf+=x.r;A.of+=f(x);A.ra+=y.r;A.oa+=f(y);B.rf+=y.r;B.of+=f(y);B.ra+=x.r;B.oa+=f(x);
+if(x.r>y.r){A.w++;B.l++;A.pts+=2}else if(y.r>x.r){B.w++;A.l++;B.pts+=2}else{A.t++;B.t++;A.pts++;B.pts++}});
+var nrr=function(r){return r.of&&r.oa?r.rf/r.of-r.ra/r.oa:0},rows=Object.keys(T).sort(function(a,b){return T[b].pts-T[a].pts||nrr(T[b])-nrr(T[a])});if(!rows.length)return'<div class="card mut">The table fills in as matches finish.</div>';
+return'<div class="card"><h2>Points table</h2><table><tr><th>Team</th><th>P</th><th>W</th><th>L</th><th>T</th><th>Pts</th><th>NRR</th></tr>'+rows.map(function(t){var r=T[t],n=nrr(r);return"<tr><td>"+esc(t)+"</td><td>"+r.p+"</td><td>"+r.w+"</td><td>"+r.l+"</td><td>"+r.t+"</td><td><b>"+r.pts+"</b></td><td>"+(n>=0?"+":"")+n.toFixed(3)+"</td></tr>"}).join("")+"</table></div>"}
+function render(){document.querySelectorAll(".tabs button[data-t]").forEach(function(b){b.className=b.dataset.t==tab?"act":""});app.innerHTML={score:scoreView,card:cardView,graph:graphView,matches:matchesView,table:tableView}[tab]();var f=document.getElementById("nn");if(f)f.focus()}
+document.querySelectorAll(".tabs button[data-t]").forEach(function(b){b.onclick=function(){tab=b.dataset.t;render()}});render();
+try{if("serviceWorker" in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register("sw.js")}catch(e){}
+</script></body></html>
